@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError, TelegramRetryAfter
 from aiogram.utils.backoff import BackoffConfig
 
-# Telegram Bot Token
+# Telegram Bot Token (замени на свой)
 TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
 
 # ID групп
@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# Загрузка данных пользователей
+# Баллы пользователей (загружаем из файла или создаем пустую базу)
 try:
     with open("user_scores.json", "r") as file:
         user_scores = json.load(file)
@@ -43,48 +43,70 @@ LEVELS = {
     "Guardian": 2000
 }
 
-async def add_points(user_id: int, points: int):
-    user_id = str(user_id)
-    if user_id not in user_scores:
-        user_scores[user_id] = {"points": 0, "level": "Seeker"}
-    user_scores[user_id]["points"] += points
-    await check_level_up(user_id)
-    save_data()
-
-async def remove_points(user_id: int, points: int):
-    user_id = str(user_id)
-    if user_id in user_scores:
-        user_scores[user_id]["points"] = max(0, user_scores[user_id]["points"] - points)
+async def add_points(user_id, points):
+    try:
+        user_id = str(user_id)
+        if user_id not in user_scores:
+            user_scores[user_id] = {"points": 0, "level": "Seeker"}
+        user_scores[user_id]["points"] += points
+        await check_level_up(user_id)
         save_data()
+    except Exception as e:
+        logging.error(f"Ошибка начисления баллов: {e}")
 
-async def check_level_up(user_id: str):
-    points = user_scores[user_id]["points"]
-    current_level = user_scores[user_id]["level"]
-    for level, required in LEVELS.items():
-        if points >= required and current_level != level:
-            user_scores[user_id]["level"] = level
-            await bot.send_message(user_id, f"🎉 Новый уровень: {level}!")
-            await add_to_group(int(user_id), level)
-            break
+async def remove_points(user_id, points):
+    try:
+        user_id = str(user_id)
+        if user_id in user_scores:
+            user_scores[user_id]["points"] = max(0, user_scores[user_id]["points"] - points)
+            save_data()
+    except Exception as e:
+        logging.error(f"Ошибка списания баллов: {e}")
+
+async def check_level_up(user_id):
+    try:
+        points = user_scores[user_id]["points"]
+        current_level = user_scores[user_id]["level"]
+        for level, required_points in LEVELS.items():
+            if points >= required_points and current_level != level:
+                user_scores[user_id]["level"] = level
+                await bot.send_message(user_id, f"🎉 Поздравляем! Вы достигли уровня **{level}**!")
+                await add_to_group(user_id, level)
+                break
+    except Exception as e:
+        logging.error(f"Ошибка проверки уровня: {e}")
 
 def save_data():
-    with open("user_scores.json", "w") as file:
-        json.dump(user_scores, file, indent=4)
-
-async def add_to_group(user_id: int, level: str):
     try:
-        group = {
-            "Practitioner": GROUPS['active'],
-            "Mentor": GROUPS['mentors'],
-            "Guardian": GROUPS['vip']
-        }.get(level)
-        
-        if group:
-            chat = await bot.get_chat(group)
-            await bot.add_chat_member(chat.id, user_id)
-            await bot.send_message(user_id, f"Добро пожаловать в {group}!")
+        with open("user_scores.json", "w") as file:
+            json.dump(user_scores, file)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения данных: {e}")
+
+async def add_to_group(user_id, level):
+    try:
+        if level == "Practitioner":
+            chat_id = await get_chat_id(GROUPS['active'])
+            await bot.add_chat_member(chat_id, user_id)
+            await bot.send_message(user_id, f"Добро пожаловать в чат активных участников: {GROUPS['active']}")
+        elif level == "Mentor":
+            chat_id = await get_chat_id(GROUPS['mentors'])
+            await bot.add_chat_member(chat_id, user_id)
+            await bot.send_message(user_id, f"Добро пожаловать в чат наставников: {GROUPS['mentors']}")
+        elif level == "Guardian":
+            chat_id = await get_chat_id(GROUPS['vip'])
+            await bot.add_chat_member(chat_id, user_id)
+            await bot.send_message(user_id, f"Вы стали Хранителем! Доступ в VIP-клуб: {GROUPS['vip']}")
     except Exception as e:
         logging.error(f"Ошибка добавления в группу: {e}")
+
+async def get_chat_id(chat_link):
+    try:
+        chat_info = await bot.get_chat(chat_link)
+        return chat_info.id
+    except Exception as e:
+        logging.error(f"Ошибка получения идентификатора чата: {e}")
+        return None
 
 # Кастомный фильтр для админов
 class IsChatAdmin(BaseFilter):
@@ -100,41 +122,60 @@ class IsChatAdmin(BaseFilter):
 
 # Обработчики команд
 @dp.message(Command("add_points"), IsChatAdmin())
-async def handle_add_points(message: types.Message):
-    if message.from_user.id not in ADMINS:
-        return
-    try:
-        _, user_id, points = message.text.split()
-        await add_points(int(user_id), int(points))
-        await message.reply(f"✅ Добавлено {points} баллов для {user_id}")
-    except:
-        await message.reply("❌ Формат: /add_points <user_id> <points>")
+async def admin_add_points(message: types.Message):
+    if message.from_user.id in ADMINS:
+        args = message.text.split()
+        if len(args) == 3 and args[1].isdigit() and args[2].isdigit():
+            user_id = args[1]
+            points = int(args[2])
+            await add_points(user_id, points)
+            await message.reply(f"✅ Начислено {points} баллов пользователю {user_id}.")
+        else:
+            await message.reply("❌ Используйте формат: /add_points <user_id> <баллы>")
+    else:
+        await message.reply("❌ Вы не являетесь администратором.")
 
+# Обработчики команд
 @dp.message(Command("remove_points"), IsChatAdmin())
-async def handle_remove_points(message: types.Message):
-    if message.from_user.id not in ADMINS:
-        return
-    try:
-        _, user_id, points = message.text.split()
-        await remove_points(int(user_id), int(points))
-        await message.reply(f"✅ Снято {points} баллов с {user_id}")
-    except:
-        await message.reply("❌ Формат: /remove_points <user_id> <points>")
+async def admin_remove_points(message: types.Message):
+    if message.from_user.id in ADMINS:
+        args = message.text.split()
+        if len(args) == 3 and args[1].isdigit() and args[2].isdigit():
+            user_id = args[1]
+            points = int(args[2])
+            await remove_points(user_id, points)
+            await message.reply(f"❌ Снято {points} баллов у пользователя {user_id}.")
+        else:
+            await message.reply("❌ Используйте формат: /remove_points <user_id> <баллы>")
+    else:
+        await message.reply("❌ Вы не являетесь администратором.")
 
+# Команда для пользователя - узнать текущий статус и прогресс
 @dp.message(Command("status"))
-async def handle_status(message: types.Message):
+async def user_status(message: types.Message):
     user_id = str(message.from_user.id)
     if user_id in user_scores:
-        data = user_scores[user_id]
-        reply = f"🏅 Уровень: {data['level']}\n💎 Баллы: {data['points']}"
-        await message.reply(reply)
+        points = user_scores[user_id]["points"]
+        current_level = user_scores[user_id]["level"]
+        next_level = None
+        points_needed = None
+        for level, required_points in LEVELS.items():
+            if required_points > points:
+                next_level = level
+                points_needed = required_points - points
+                break
+        if next_level:
+            await message.reply(f"🏆 Ваш уровень: {current_level} ({points} баллов)\nСледующий уровень: {next_level} через {points_needed} баллов.")
+        else:
+            await message.reply(f"🏆 Ваш уровень: {current_level} ({points} баллов). Вы достигли максимального уровня!")
     else:
-        await message.reply("❌ Данные не найдены")
+        await message.reply("❌ У вас пока нет баллов. Начните участвовать в активности!")
 
+# Команда для просмотра списка групп
 @dp.message(Command("groups"))
-async def handle_groups(message: types.Message):
-    groups = "\n".join([f"{k}: {v}" for k, v in GROUPS.items()])
-    await message.reply(f"📚 Список групп:\n{groups}")
+async def show_groups(message: types.Message):
+    groups_list = "\n".join([f"{name}: {link}" for name, link in GROUPS.items()])
+    await message.reply(f"Список групп:\n{groups_list}")
 
 # Обработка ошибок
 @dp.errors()
