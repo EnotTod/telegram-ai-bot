@@ -7,7 +7,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError, TelegramRetryAfter
 from aiogram.utils.backoff import BackoffConfig
 
-# Telegram Bot Token (замени на свой)
+# Telegram Bot Token
 TOKEN = "7555883585:AAFriyovBm-8UKAgWwl78CaD_cGmLPu2nAg"
 
 # ID групп
@@ -121,6 +121,10 @@ class IsChatAdmin(BaseFilter):
         return isinstance(member, types.ChatMemberAdministrator) and member.can_restrict_members
 
 # Обработчики команд
+@dp.message(Command("start"))
+async def handle_start(message: types.Message):
+    await message.reply("Бот запущен!")
+
 @dp.message(Command("add_points"), IsChatAdmin())
 async def admin_add_points(message: types.Message):
     if message.from_user.id in ADMINS:
@@ -135,7 +139,6 @@ async def admin_add_points(message: types.Message):
     else:
         await message.reply("❌ Вы не являетесь администратором.")
 
-# Обработчики команд
 @dp.message(Command("remove_points"), IsChatAdmin())
 async def admin_remove_points(message: types.Message):
     if message.from_user.id in ADMINS:
@@ -150,7 +153,6 @@ async def admin_remove_points(message: types.Message):
     else:
         await message.reply("❌ Вы не являетесь администратором.")
 
-# Команда для пользователя - узнать текущий статус и прогресс
 @dp.message(Command("status"))
 async def user_status(message: types.Message):
     user_id = str(message.from_user.id)
@@ -171,15 +173,20 @@ async def user_status(message: types.Message):
     else:
         await message.reply("❌ У вас пока нет баллов. Начните участвовать в активности!")
 
-# Команда для просмотра списка групп
 @dp.message(Command("groups"))
 async def show_groups(message: types.Message):
     groups_list = "\n".join([f"{name}: {link}" for name, link in GROUPS.items()])
     await message.reply(f"Список групп:\n{groups_list}")
 
+# Обработчик для всех остальных сообщений
+@dp.message()
+async def handle_message(message: types.Message):
+    await message.reply("Неизвестная команда.")
+
 # Обработка ошибок
 @dp.errors()
 async def error_handler(update, exception):
+    logging.error(f"Error occurred: {exception}")
     if isinstance(exception, TelegramConflictError):
         logging.critical("Conflict detected. Stopping bot.")
         await dp.stop_polling()
