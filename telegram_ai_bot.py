@@ -155,7 +155,12 @@ async def main():
             bot,
             polling_timeout=30,
             handle_as_tasks=True,
-            backoff_config={"min_delay": 1.0, "max_delay": 5.0, "factor": 1.3, "jitter": 0.1},
+            backoff_config={
+                "min_delay": 1.0,
+                "max_delay": 5.0,
+                "factor": 1.3,
+                "jitter": 0.1
+            },
             allowed_updates=None,
             handle_signals=True,
             close_bot_session=True
