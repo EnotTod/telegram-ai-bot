@@ -1,14 +1,22 @@
 import logging
 import json
 import asyncio
+import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, BaseFilter
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError, TelegramRetryAfter
 from aiogram.utils.backoff import BackoffConfig
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Telegram Bot Token
-TOKEN = "7788911519:AAFEnT8AVaUE2u7On02AR1Mj0pdFWewphd8"
+TOKEN = os.environ.get("BOT_TOKEN")
+
+if not TOKEN:
+    print("Токен не найден в переменных окружения.")
+    exit()
 
 # ID групп
 GROUPS = {
