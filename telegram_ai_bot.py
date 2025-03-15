@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, BaseFilter
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError, TelegramRetryAfter
+from aiogram.utils.backoff import BackoffConfig
 
 # Telegram Bot Token
 TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
@@ -150,17 +151,19 @@ async def error_handler(update, exception):
         logging.error(f"Error occurred: {exception}")
 
 async def main():
+    backoff_config = BackoffConfig(
+        min_delay=1.0,
+        max_delay=5.0,
+        factor=1.3,
+        jitter=0.1
+    )
+    
     try:
         await dp.start_polling(
             bot,
             polling_timeout=30,
             handle_as_tasks=True,
-            backoff_config={
-                "min_delay": 1.0,
-                "max_delay": 5.0,
-                "factor": 1.3,
-                "jitter": 0.1
-            },
+            backoff_config=backoff_config,
             allowed_updates=None,
             handle_signals=True,
             close_bot_session=True
