@@ -153,9 +153,12 @@ async def main():
     try:
         await dp.start_polling(
             bot,
-            allowed_updates=dp.resolve_used_update_types(),
-            relax=2.0,  # Увеличить интервал между запросами
-            timeout=30   # Таймаут для long-polling
+            polling_timeout=30,
+            handle_as_tasks=True,
+            backoff_config={"min_delay": 1.0, "max_delay": 5.0, "factor": 1.3, "jitter": 0.1},
+            allowed_updates=None,
+            handle_signals=True,
+            close_bot_session=True
         )
     except Exception as e:
         logging.critical(f"Failed to start polling: {e}")
