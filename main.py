@@ -9,4 +9,4 @@ if os.environ.get("RUN_MAIN_SCRIPT"):
     import main
 else:
     # Запуск другого скрипта
-    import other_script
+    # import other_script
