@@ -6,7 +6,7 @@ from aiogram.filters import Command, IsChatAdmin
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # Telegram Bot Token
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
 
 # ID групп
 GROUPS = {
