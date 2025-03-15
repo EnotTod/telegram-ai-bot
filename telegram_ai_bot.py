@@ -2,8 +2,9 @@ import logging
 import json
 import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command, IsChatAdmin
+from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import ChatMemberAdministrator
 
 # Telegram Bot Token
 TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
@@ -83,6 +84,20 @@ async def add_to_group(user_id: int, level: str):
             await bot.send_message(user_id, f"Добро пожаловать в {group}!")
     except Exception as e:
         logging.error(f"Ошибка добавления в группу: {e}")
+
+# Кастомный фильтр для админов
+from aiogram.filters import BaseFilter
+
+class IsChatAdmin(BaseFilter):
+    async def __call__(self, message: types.Message) -> bool:
+        if not message.chat.type in ["group", "supergroup"]:
+            return False
+            
+        member = await message.bot.get_chat_member(
+            chat_id=message.chat.id,
+            user_id=message.from_user.id
+        )
+        return isinstance(member, ChatMemberAdministrator) and member.can_restrict_members
 
 # Обработчики команд
 @dp.message(Command("add_points"), IsChatAdmin())
