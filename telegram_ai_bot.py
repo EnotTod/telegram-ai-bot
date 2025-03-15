@@ -7,7 +7,7 @@ import json
 import random
 
 # Telegram Bot Token (замени на свой)
-TOKEN = 7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ
+TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
 
 # ID групп
 GROUPS = {
