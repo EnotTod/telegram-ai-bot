@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramConflictError, TelegramRetryAfter
 from aiogram.utils.backoff import BackoffConfig
 
 # Telegram Bot Token (замени на свой)
-TOKEN = "your_token_here"
+TOKEN = "7555883585:AAFriyovBm-8UKAgWwl78CaD_cGmLPu2nAg"
 
 # ID групп
 GROUPS = {
