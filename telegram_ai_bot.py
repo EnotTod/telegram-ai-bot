@@ -5,7 +5,7 @@ import asyncio
 import json
 
 # Telegram Bot Token (замени на свой)
-TOKEN = "your_token_here"
+TOKEN = "7555883585:AAFFzmAIxWCIQWkxn1qE-3NFp3sDIyW_hIQ"
 
 # ID групп
 GROUPS = {
