@@ -5,8 +5,14 @@
       "use": "@railway/python",
       "config": {
         "runtime": "python3.12",
-        "maxInstances": 1
+        "maxInstances": 1,
+        "commands": {
+          "start": "python main.py"
+        }
       }
     }
-  ]
+  ],
+  "env": {
+    "RUN_MAIN_SCRIPT": "true"
+  }
 }
